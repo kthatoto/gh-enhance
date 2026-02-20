@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GH Enhance - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>GH Enhance Settings</h1>
+      <p class="subtitle">Customize your one-click approve button</p>
+    </header>
+
+    <main>
+      <div class="form-group">
+        <label for="buttonText">Button Text / Comment</label>
+        <input
+          type="text"
+          id="buttonText"
+          placeholder="Enter button text..."
+          autocomplete="off"
+        >
+        <p class="hint">This text will be displayed on the button and used as the review comment.</p>
+      </div>
+
+      <div class="actions">
+        <button id="saveButton" type="button">Save Settings</button>
+        <button id="resetButton" type="button" class="secondary">Reset to Default</button>
+      </div>
+
+      <div id="status" class="status" aria-live="polite"></div>
+    </main>
+
+    <footer>
+      <p>GH Enhance v1.0.0</p>
+    </footer>
+  </div>
+
+  <script type="module" src="options.ts"></script>
+</body>
+</html>

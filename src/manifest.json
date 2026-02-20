@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "GH Enhance",
+  "version": "1.0.0",
+  "description": "Enhance your GitHub experience with quick actions",
+  "permissions": ["storage"],
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*/*/pull/*/files",
+        "https://github.com/*/*/pull/*/files/*",
+        "https://github.com/*/*/pull/*/changes",
+        "https://github.com/*/*/pull/*/changes/*"
+      ],
+      "js": ["src/content/content.ts"]
+    }
+  ]
+}
