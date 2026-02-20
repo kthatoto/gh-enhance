@@ -55,36 +55,45 @@ function getPrInfo(): { owner: string; repo: string; pullNumber: string } | null
   return { owner: match[1], repo: match[2], pullNumber: match[3] };
 }
 
-async function getHeadSha(prInfo: { owner: string; repo: string; pullNumber: string }): Promise<string | null> {
-  // Use GitHub API to get head SHA
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/pulls/${prInfo.pullNumber}`,
-      {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      return data.head.sha;
+function getHeadSha(): string | null {
+  const html = document.documentElement.innerHTML;
+
+  // Find all 40-char hex strings that look like SHAs
+  const allShas = html.match(/[a-f0-9]{40}/g) || [];
+  console.log('GH Enhance: Found SHAs:', [...new Set(allShas)]);
+
+  // Look for patterns near "head" keyword
+  const headPatterns = html.match(/.{0,30}head.{0,50}[a-f0-9]{40}.{0,10}/gi) || [];
+  console.log('GH Enhance: Head patterns:', headPatterns.slice(0, 5));
+
+  // Method 1: Look for specific JSON patterns
+  const patterns = [
+    /"headRefOid":"([a-f0-9]{40})"/,
+    /"headOid":"([a-f0-9]{40})"/,
+    /"head_sha":"([a-f0-9]{40})"/,
+    /"headSha":"([a-f0-9]{40})"/,
+    /"oid":"([a-f0-9]{40})"/,
+    /head.*?([a-f0-9]{40})/i,
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match) {
+      console.log('GH Enhance: Found SHA with pattern:', pattern, match[1]);
+      return match[1];
     }
-  } catch (e) {
-    // Fall through to DOM methods
   }
 
-  // Fallback: Look in the page HTML
-  const html = document.body.innerHTML;
-
-  const headOidMatch = html.match(/"headOid":"([a-f0-9]{40})"/);
-  if (headOidMatch) return headOidMatch[1];
-
-  const oidMatch = html.match(/"oid":"([a-f0-9]{40})"/);
-  if (oidMatch) return oidMatch[1];
-
-  const headShaMatch = html.match(/"headSha":"([a-f0-9]{40})"/);
-  if (headShaMatch) return headShaMatch[1];
+  // Method 2: Look for commit links
+  const commitLinks = document.querySelectorAll('a[href*="/commit/"]');
+  console.log('GH Enhance: Commit links found:', commitLinks.length);
+  for (const link of commitLinks) {
+    const href = link.getAttribute('href') || '';
+    const match = href.match(/\/commit\/([a-f0-9]{7,40})/);
+    if (match) {
+      console.log('GH Enhance: Found SHA from commit link:', match[1]);
+      return match[1];
+    }
+  }
 
   return null;
 }
@@ -104,7 +113,7 @@ async function handleLgtmClick(event: Event): Promise<void> {
       throw new Error('Could not parse PR info from URL');
     }
 
-    const headSha = await getHeadSha(prInfo);
+    const headSha = getHeadSha();
     if (!headSha) {
       throw new Error('Could not find head SHA');
     }
