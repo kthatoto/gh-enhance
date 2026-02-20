@@ -55,14 +55,34 @@ function getPrInfo(): { owner: string; repo: string; pullNumber: string } | null
   return { owner: match[1], repo: match[2], pullNumber: match[3] };
 }
 
-function getHeadSha(): string | null {
+async function getHeadSha(prInfo: { owner: string; repo: string; pullNumber: string }): Promise<string | null> {
+  // Use GitHub API to get head SHA
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${prInfo.owner}/${prInfo.repo}/pulls/${prInfo.pullNumber}`,
+      {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      return data.head.sha;
+    }
+  } catch (e) {
+    // Fall through to DOM methods
+  }
+
+  // Fallback: Look in the page HTML
   const html = document.body.innerHTML;
 
-  // Try "oid" pattern (GitHub's internal format)
+  const headOidMatch = html.match(/"headOid":"([a-f0-9]{40})"/);
+  if (headOidMatch) return headOidMatch[1];
+
   const oidMatch = html.match(/"oid":"([a-f0-9]{40})"/);
   if (oidMatch) return oidMatch[1];
 
-  // Fallback: "headSha" pattern
   const headShaMatch = html.match(/"headSha":"([a-f0-9]{40})"/);
   if (headShaMatch) return headShaMatch[1];
 
@@ -84,7 +104,7 @@ async function handleLgtmClick(event: Event): Promise<void> {
       throw new Error('Could not parse PR info from URL');
     }
 
-    const headSha = getHeadSha();
+    const headSha = await getHeadSha(prInfo);
     if (!headSha) {
       throw new Error('Could not find head SHA');
     }
@@ -196,13 +216,33 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
-// Initial insertion
-insertLgtmButton();
-
-// Re-check on page navigation (GitHub uses SPA navigation)
-const observer = new MutationObserver(() => {
+// Check if current page should show the button
+function isTargetPage(): boolean {
   const path = window.location.pathname;
-  if (path.includes('/pull/') && (path.includes('/files') || path.includes('/changes'))) {
+  return path.includes('/pull/') && (path.includes('/files') || path.includes('/changes'));
+}
+
+// Track URL changes for SPA navigation
+let lastUrl = location.href;
+
+// Poll for URL changes
+setInterval(() => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+    if (isTargetPage()) {
+      insertLgtmButton();
+    }
+  }
+}, 200);
+
+// Initial check
+if (isTargetPage()) {
+  insertLgtmButton();
+}
+
+// Re-check on DOM changes
+const observer = new MutationObserver(() => {
+  if (isTargetPage()) {
     insertLgtmButton();
   }
 });

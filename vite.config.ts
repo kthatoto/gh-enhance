@@ -1,16 +1,20 @@
 import { defineConfig } from 'vite';
-import { crx } from '@crxjs/vite-plugin';
-import manifest from './src/manifest.json';
+import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [
-    crx({ manifest }),
-  ],
   build: {
     outDir: 'dist',
+    emptyDirBeforeWrite: true,
     rollupOptions: {
       input: {
-        options: 'src/options/options.html',
+        content: resolve(__dirname, 'src/content/content.ts'),
+        options: resolve(__dirname, 'src/options/options.ts'),
+      },
+      output: {
+        // IIFE形式で出力（Chrome拡張機能のcontent scriptで動作させるため）
+        format: 'iife',
+        entryFileNames: '[name].js',
+        assetFileNames: '[name].[ext]',
       },
     },
   },
